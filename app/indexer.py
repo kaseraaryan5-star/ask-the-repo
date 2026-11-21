@@ -31,11 +31,14 @@ def get_client():
     return _client
 
 
-def index_repo(root):
+def index_repo(root, base_url=None, max_chunks=None):
+    """Index a repo (replacing the previous one). Returns the number of chunks."""
     chunks = chunk_repo(root)
     if not chunks:
-        print("No chunks found.")
-        return
+        raise ValueError("No Python code found in this repo.")
+    if max_chunks and len(chunks) > max_chunks:
+        raise ValueError(f"Repo too large: {len(chunks)} chunks (limit {max_chunks}).")
+
     model = get_model()
     client = get_client()
 
@@ -51,14 +54,17 @@ def index_repo(root):
     for c, vec in zip(chunks, vectors):
         # same chunk -> same id, so re-indexing never creates duplicates
         key = f"{c['file']}:{c['start_line']}-{c['end_line']}:{c['symbol']}"
+        payload = {k: c[k] for k in
+                   ("file", "symbol", "kind", "start_line", "end_line", "code")}
+        payload["base_url"] = base_url  # GitHub permalink base, None for local repos
         points.append(PointStruct(
             id=str(uuid.uuid5(uuid.NAMESPACE_URL, key)),
             vector=vec.tolist(),
-            payload={k: c[k] for k in
-                     ("file", "symbol", "kind", "start_line", "end_line", "code")},
+            payload=payload,
         ))
     client.upsert(COLLECTION, points)
     print(f"Indexed {len(points)} chunks into '{COLLECTION}'.")
+    return len(points)
 
 
 def search(query, k=3):
@@ -74,7 +80,10 @@ def search(query, k=3):
 
 if __name__ == "__main__":
     if len(sys.argv) >= 3 and sys.argv[1] == "index":
-        index_repo(sys.argv[2])
+        try:
+            index_repo(sys.argv[2])
+        except ValueError as e:
+            print(e)
     elif len(sys.argv) >= 3 and sys.argv[1] == "search":
         search(" ".join(sys.argv[2:]))
     else:

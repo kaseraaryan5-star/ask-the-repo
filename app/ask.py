@@ -49,6 +49,14 @@ def generate(prompt, retries=3):
     raise last_error
 
 
+def github_url(payload):
+    """Permalink to the exact lines on GitHub (None for locally indexed repos)."""
+    base = payload.get("base_url")
+    if not base:
+        return None
+    return f"{base}/{payload['file']}#L{payload['start_line']}-L{payload['end_line']}"
+
+
 def answer(question, k=5):
     hits = search(question, k=k)
     context = "\n\n".join(
@@ -65,6 +73,7 @@ def answer(question, k=5):
                 "end_line": h.payload["end_line"],
                 "symbol": h.payload["symbol"],
                 "score": round(h.score, 3),
+                "url": github_url(h.payload),
             }
             for h in hits
         ],
