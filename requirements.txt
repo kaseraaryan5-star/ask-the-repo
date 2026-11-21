@@ -1,4 +1,6 @@
+fastapi==0.165.0
 google-genai==3.6.1
 python-dotenv==1.2.4
 qdrant-client==1.20.0
 sentence-transformers==6.3.0
+uvicorn==0.54.0

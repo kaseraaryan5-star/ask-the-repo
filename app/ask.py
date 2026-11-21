@@ -49,19 +49,36 @@ def generate(prompt, retries=3):
     raise last_error
 
 
-def ask(question, k=5):
+def answer(question, k=5):
     hits = search(question, k=k)
     context = "\n\n".join(
         f"[{h.payload['file']}:{h.payload['start_line']}-{h.payload['end_line']}] "
         f"{h.payload['symbol']}\n{h.payload['code']}"
         for h in hits
     )
-    return generate(PROMPT.format(context=context, question=question))
+    return {
+        "answer": generate(PROMPT.format(context=context, question=question)),
+        "sources": [
+            {
+                "file": h.payload["file"],
+                "start_line": h.payload["start_line"],
+                "end_line": h.payload["end_line"],
+                "symbol": h.payload["symbol"],
+                "score": round(h.score, 3),
+            }
+            for h in hits
+        ],
+    }
+
+
+def ask(question, k=5):
+    return answer(question, k)["answer"]
 
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print('Usage: python3 -m app.ask "your question"')
     else:
+        result = answer(" ".join(sys.argv[1:]))
         print("\n--- Answer ---")
-        print(ask(" ".join(sys.argv[1:])))
+        print(result["answer"])

@@ -14,6 +14,7 @@ COLLECTION = "code_chunks"
 DB_PATH = "qdrant_data"
 
 _model = None
+_client = None
 
 
 def get_model():
@@ -23,13 +24,20 @@ def get_model():
     return _model
 
 
+def get_client():
+    global _client
+    if _client is None:
+        _client = QdrantClient(path=DB_PATH)
+    return _client
+
+
 def index_repo(root):
     chunks = chunk_repo(root)
     if not chunks:
         print("No chunks found.")
         return
     model = get_model()
-    client = QdrantClient(path=DB_PATH)
+    client = get_client()
 
     if client.collection_exists(COLLECTION):
         client.delete_collection(COLLECTION)
@@ -55,7 +63,7 @@ def index_repo(root):
 
 def search(query, k=3):
     model = get_model()
-    client = QdrantClient(path=DB_PATH)
+    client = get_client()
     vec = model.encode(query).tolist()
     hits = client.query_points(COLLECTION, query=vec, limit=k).points
     for h in hits:
