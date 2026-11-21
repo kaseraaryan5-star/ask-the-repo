@@ -16,7 +16,7 @@ app = FastAPI(title="Ask the Repo")
 
 class AskRequest(BaseModel):
     question: str
-    k: int = 5
+    k: int = 8
 
 
 class IndexRequest(BaseModel):
