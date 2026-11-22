@@ -63,11 +63,6 @@ if st.button("Index repo"):
             st.error(str(e))
         except Exception as e:  # network, git, embedding errors
             st.error(f"Indexing failed: {e}")
-            
-st.caption(
-    f"DEBUG key={bool(os.getenv('GOOGLE_API_KEY'))} "
-    f"model={os.getenv('GEMINI_MODEL')} fallback={os.getenv('GEMINI_FALLBACK_MODEL')}"
-)
 
 st.subheader("2. Ask a question")
 if "indexed_repo" not in st.session_state:
