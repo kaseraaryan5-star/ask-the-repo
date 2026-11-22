@@ -2,10 +2,11 @@ import os
 
 import streamlit as st
 
-# On Streamlit Cloud the key lives in st.secrets; the app code reads os.environ.
+# On Streamlit Cloud the keys live in st.secrets; the app code reads os.environ.
 try:
-    if "GOOGLE_API_KEY" in st.secrets and not os.getenv("GOOGLE_API_KEY"):
-        os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+    for key in ("GOOGLE_API_KEY", "GEMINI_MODEL", "GEMINI_FALLBACK_MODEL"):
+        if key in st.secrets and not os.getenv(key):
+            os.environ[key] = str(st.secrets[key])
 except Exception:
     pass  # no secrets file locally; .env is used instead
 
@@ -14,6 +15,24 @@ from app.github import clone
 from app.indexer import index_repo
 
 MAX_CHUNKS = 1500
+
+
+def friendly_error(e: Exception) -> str:
+    msg = str(e)
+    if "503" in msg or "UNAVAILABLE" in msg:
+        return (
+            "Gemini is busy right now (high demand on Google's side). "
+            "Please wait a minute and press Ask again."
+        )
+    if "429" in msg or "RESOURCE_EXHAUSTED" in msg:
+        return (
+            "The demo's Gemini quota is rate-limited right now. "
+            "Please try again in a few minutes."
+        )
+    if "API key" in msg or "PERMISSION_DENIED" in msg:
+        return "The demo is misconfigured (API key issue). Please try again later."
+    return "Something went wrong while generating the answer. Please try again."
+
 
 st.set_page_config(page_title="Ask the Repo", page_icon="🔎")
 st.title("🔎 Ask the Repo")
@@ -44,13 +63,26 @@ if st.button("Index repo"):
             st.error(str(e))
         except Exception as e:  # network, git, embedding errors
             st.error(f"Indexing failed: {e}")
+            
+st.caption(
+    f"DEBUG key={bool(os.getenv('GOOGLE_API_KEY'))} "
+    f"model={os.getenv('GEMINI_MODEL')} fallback={os.getenv('GEMINI_FALLBACK_MODEL')}"
+)
 
 st.subheader("2. Ask a question")
 if "indexed_repo" not in st.session_state:
-    st.info("Index a repo first. Note: the index is shared, so indexing a new repo replaces the previous one.")
+    st.info(
+        "Index a repo first. Note: the index is shared, so indexing a new repo "
+        "replaces the previous one."
+    )
 else:
-    st.caption(f"Indexed: {st.session_state['indexed_repo']} ({st.session_state.get('chunks', '?')} chunks)")
-    question = st.text_input("Your question", placeholder="What does the github_url function do?")
+    st.caption(
+        f"Indexed: {st.session_state['indexed_repo']} "
+        f"({st.session_state.get('chunks', '?')} chunks)"
+    )
+    question = st.text_input(
+        "Your question", placeholder="What does the github_url function do?"
+    )
     k = st.slider(
         "How many code chunks to retrieve",
         3, 12, 8,
@@ -70,4 +102,6 @@ else:
                 else:
                     st.markdown(f"- {label} · score {s.get('score', '')}")
         except Exception as e:
-            st.error(f"Could not answer: {e}")
+            st.warning(friendly_error(e))
+            with st.expander("Technical details"):
+                st.code(str(e))
