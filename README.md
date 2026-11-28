@@ -3,7 +3,9 @@
 
 # Ask the Repo
  
-**Live demo:** https://aryan-ask-the-repo.streamlit.app
+**Try it live:** https://aryan-ask-the-repo.streamlit.app/
+
+**Write-up:** https://aryankasera.hashnode.dev/how-i-built-ask-the-repo-ast-chunking-vs-fixed-size-chunking-for-code-rag
  
 > The demo runs on free hosting and Gemini's free tier. It may take about 30 seconds to wake up, and it may occasionally be busy. If it fails, try again in a minute. The index is shared between visitors; indexing a new repo replaces the previous one.
  
